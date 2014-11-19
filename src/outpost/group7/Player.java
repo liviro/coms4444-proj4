@@ -7,11 +7,11 @@ import outpost.sim.Point;
 import outpost.sim.movePair;
 
 public class Player extends outpost.sim.Player {
-	static int size = 100;
-	static Point[] grid = new Point[size*size];
-	static Random random = new Random();
-	static int[] theta = new int[100];
-	static int counter = 0;
+    static int size = 100;
+    static Point[] grid = new Point[size*size];
+    static Random random = new Random();
+    static int[] theta = new int[100];
+    static int counter = 0;
 
     ////////////////////////////////////////////////////////////////////
     static Pair HOME_CELL;
