@@ -52,10 +52,20 @@ public class Player extends outpost.sim.Player {
                     Stack<Direction> moves = new Stack<Direction>();
                     int i;
                     for (i = 0; i < outpost.id; i++) {
-                        moves.push(Y_AWAY);
+                        if (outpost.id % 2 == 0) {
+                            moves.push(X_AWAY);
+                        }
+                        else {
+                            moves.push(Y_AWAY);
+                        }
                     }
                     while (i < 10) {
-                        moves.push(X_AWAY);
+                        if (outpost.id % 2 == 0) {
+                            moves.push(Y_AWAY);
+                        }
+                        else {
+                            moves.push(X_AWAY);
+                        }
                         i++;
                     }
                     outpost.assignMoves(moves);
