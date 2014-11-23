@@ -135,7 +135,16 @@ public class Player extends outpost.sim.Player {
 				int row = 1;
 				int col = start;
 				while (col > 0 && cnt < n) {
-					positions.add(new Pair(2 * R * row - R, 2 * R * col - R));
+					Pair position = new Pair(2 * R * row - R, 2 * R * col - R);
+					double distanceFromBase = manhattanDistance(position, HOME_CELL);
+					int i;
+					for (i = 0; i < positions.size(); i++) {
+						double otherDistance = manhattanDistance(positions.get(i), HOME_CELL);
+						if (distanceFromBase > otherDistance) {
+							break;
+						}
+					}
+					positions.add(i, position);
 					++cnt;
 					++row;
 					--col;
