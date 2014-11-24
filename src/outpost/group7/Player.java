@@ -74,7 +74,7 @@ public class Player extends outpost.sim.Player {
 			if (strategy == Strategy.ARMY) {
 				// general strategy
 				// (1) generate bestPositions according to weights
-				ArrayList<Pair> bestPositions = findBestPositions(myOutposts.size());
+				ArrayList<Pair> bestPositions = findBestPositions(myOutposts);
 
 				// (2) assign bestPositions as target positions to outposts
 				// currently assigned to the nearest outpost based on manhattan distance
@@ -125,29 +125,60 @@ public class Player extends outpost.sim.Player {
 			}
 		}
 
+		public boolean isInWater(Pair p) {
+			if( grid[p.x * size + p.y ].water ) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+
 		// find best positions based on map and resources
 		// weight the cells to get the best
-		public ArrayList<Pair> findBestPositions(int n) {
+		public ArrayList<Pair> findBestPositions(ArrayList<Outpost> outposts) {
+			int n = outposts.size();
 			ArrayList<Pair> positions = new ArrayList<Pair>();
 			int cnt = 0;
-			int start = 1;
+			int start = 0;
 			while (cnt < n) {
-				int row = 1;
-				int col = start;
+				int row = 0;
+				int col;
+				col = start;
 				while (col > 0 && cnt < n) {
-					Pair position = new Pair(2 * R * row - R, 2 * R * col - R);
-					double distanceFromBase = manhattanDistance(position, HOME_CELL);
-					int i;
-					for (i = 0; i < positions.size(); i++) {
-						double otherDistance = manhattanDistance(positions.get(i), HOME_CELL);
-						if (distanceFromBase > otherDistance) {
-							break;
+					int newXPos, newYPos;
+					if( X_AWAY == Direction.RIGHT ) {
+						newXPos = R * row;
+					} else {
+						newXPos = size-1 - R * row;
+					}
+					if( Y_AWAY == Direction.DOWN ) {
+						newYPos = R * col;
+					} else {
+						newYPos = size-1 - R * col;
+					}
+					Pair newPair = new Pair(newXPos, newYPos);
+					if( /*! isInWater(newPair)*/ true ) {
+						positions.add(newPair);
+						++cnt;
+
+						double distanceFromBase = manhattanDistance(newPair, HOME_CELL);
+						int i;
+						for (i = 0; i < positions.size(); i++) {
+							double otherDistance = manhattanDistance(positions.get(i), HOME_CELL);
+							if (distanceFromBase > otherDistance) {
+								break;
+							}
 						}
 					}
+<<<<<<< HEAD
 					positions.add(i, position);
 					++cnt;
 					row += Direction.Y_AWAY.dy;
 					col += Direction.X_AWAY.dx;
+=======
+					++row;
+					--col;
+>>>>>>> 46ff15f17ef0ca97c1552230fe0f27cf2a4b4a0e
 				}
 				++start;
 			}
