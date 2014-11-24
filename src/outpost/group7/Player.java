@@ -146,8 +146,8 @@ public class Player extends outpost.sim.Player {
 					}
 					positions.add(i, position);
 					++cnt;
-					++row;
-					--col;
+					row += Direction.Y_AWAY.dy;
+					col += Direction.X_AWAY.dx;
 				}
 				++start;
 			}
