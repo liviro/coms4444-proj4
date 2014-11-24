@@ -170,15 +170,8 @@ public class Player extends outpost.sim.Player {
 							}
 						}
 					}
-<<<<<<< HEAD
-					positions.add(i, position);
-					++cnt;
-					row += Direction.Y_AWAY.dy;
-					col += Direction.X_AWAY.dx;
-=======
 					++row;
 					--col;
->>>>>>> 46ff15f17ef0ca97c1552230fe0f27cf2a4b4a0e
 				}
 				++start;
 			}
