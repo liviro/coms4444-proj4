@@ -160,6 +160,15 @@ public class Player extends outpost.sim.Player {
 					if( /*! isInWater(newPair)*/ true ) {
 						positions.add(newPair);
 						++cnt;
+
+						double distanceFromBase = manhattanDistance(newPair, HOME_CELL);
+						int i;
+						for (i = 0; i < positions.size(); i++) {
+							double otherDistance = manhattanDistance(positions.get(i), HOME_CELL);
+							if (distanceFromBase > otherDistance) {
+								break;
+							}
+						}
 					}
 					++row;
 					--col;
