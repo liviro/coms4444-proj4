@@ -105,10 +105,10 @@ public class Player extends outpost.sim.Player {
 					}
 					myOutposts.get(oid).target = new Pair(position);
 				}
-				//for (Outpost outpost : myOutposts) {
-				//	System.out.printf("outpost target: (%d, %d) -- (%d, %d)\n", outpost.position.x, outpost.position.y, outpost.target.x, outpost.target.y);
-				//	System.out.printf("water = %d, land = %d\n", water[outpost.target.x][outpost.target.y], land[outpost.target.x][outpost.target.y]);
-				//}
+				/*for (Outpost outpost : myOutposts) {
+					System.out.printf("outpost target: (%d, %d) -- (%d, %d)\n", outpost.position.x, outpost.position.y, outpost.target.x, outpost.target.y);
+					System.out.printf("water = %d, land = %d\n", water[outpost.target.x][outpost.target.y], land[outpost.target.x][outpost.target.y]);
+				}*/
 
 				// soldier strategy
 				for (Outpost outpost : myOutposts) {
@@ -169,6 +169,8 @@ public class Player extends outpost.sim.Player {
 		// weight the cells to get the best
 		public ArrayList<Pair> findBestPositions(ArrayList<Outpost> outposts) {
 			int n = outposts.size();
+			ArrayList<Pair> positions = new ArrayList<Pair>();
+			/*
 			PriorityQueue<Position> queue = new PriorityQueue<Position>(n, new PositionComparator());
 			for (int i = 0; i < size; i += R) {
 				for (int j = 0; j < size; j += R) {
@@ -194,9 +196,245 @@ public class Player extends outpost.sim.Player {
 			ArrayList<Pair> positions = new ArrayList<Pair>();
 			for (Position pos : queue) {
 				positions.add(pos.toPair());
+			}*/
+			if (LACK_WATER < 0) {
+				for (Outpost outpost : myOutposts) {
+					if (hasWater(outpost.position)) {
+						int[] cx = {0, -1, 0, 1, 0};
+						int[] cy = {0, 0, 1, 0, -1};
+						int w = -1;
+						int x = -1;
+						int y = -1;
+						for (int i = 0; i < 5; ++i) {
+							int xx = outpost.position.x + cx[i];
+							int yy = outpost.position.y + cy[i];
+							if (xx < 0 || xx >= size || yy < 0 || yy >= size)
+								continue;
+							if (!grid[xx * size + yy].water && water[xx][yy] > w) {
+								w = water[xx][yy];
+								x = xx;
+								y = yy;
+							}
+						}
+						int t;
+						for (t = 0; t < positions.size(); ++t) {
+							if (overlap(positions.get(t), new Pair(x, y)))
+								break;
+						}
+						if (t < positions.size()) continue;
+						positions.add(new Pair(x, y));
+					}
+				}
+				int tmp = positions.size();
+				int rem = n - positions.size();
+				// greedy select n largest water cell
+				for (int k = 0; k < rem; ++k) {
+					int w = -1;
+					int x = -1;
+					int y = -1;
+					for (int i = 0; i < size; ++i) {
+						for (int j = 0; j < size; ++j) {
+							if (grid[i * size + j].water || water[i][j] < w) continue;
+							int t;
+							for (t = 0; t < tmp + k; ++t) {
+								if (overlap(positions.get(t), new Pair(i, j)))
+									break;
+							}
+							if (t < tmp + k) continue;
+							if (water[i][j] > w) {
+								w = water[i][j];
+								x = i;
+								y = j;
+							}
+						}
+					}
+					positions.add(new Pair(x, y));
+				}
+			}
+			else if (LACK_LAND < 0) {
+				for (Outpost outpost : myOutposts) {
+					if (land[outpost.position.x][outpost.position.y] > 0) {
+						int[] cx = {-1, 0, 1, 0, 0};
+						int[] cy = {0, 1, 0, -1, 0};
+						int w = -1;
+						int x = -1;
+						int y = -1;
+						for (int i = 0; i < 5; ++i) {
+							int xx = outpost.position.x + cx[i];
+							int yy = outpost.position.y + cy[i];
+							if (xx < 0 || xx >= size || yy < 0 || yy >= size)
+								continue;
+							if (!grid[xx * size + yy].water && water[xx][yy] > w) {
+								w = water[xx][yy];
+								x = xx;
+								y = yy;
+							}
+						}
+						int t;
+						for (t = 0; t < positions.size(); ++t) {
+							if (overlap(positions.get(t), new Pair(x, y)))
+								break;
+						}
+						if (t < positions.size()) continue;
+						positions.add(new Pair(x, y));
+					}
+				}
+				int tmp = positions.size();
+				int rem = n - positions.size();
+				// greedy select n largest land cell
+				for (int k = 0; k < rem; ++k) {
+					int w = -1;
+					int x = -1;
+					int y = -1;
+					for (int i = 0; i < size; ++i) {
+						for (int j = 0; j < size; ++j) {
+							if (grid[i * size + j].water || land[i][j] < w) continue;
+							int t;
+							for (t = 0; t < k + tmp; ++t) {
+								if (overlap(positions.get(t), new Pair(i, j)))
+									break;
+							}
+							if (t < k + tmp) continue;
+							if (land[i][j] > w) {
+								w = land[i][j];
+								x = i;
+								y = j;
+							}
+						}
+					}
+					positions.add(new Pair(x, y));
+				}
+			}
+			else {
+				for (Outpost outpost : myOutposts) {
+					if (hasWater(outpost.position)) {
+						int[] cx = {0, -1, 0, 1, 0};
+						int[] cy = {0, 0, 1, 0, -1};
+						int w = -1;
+						int x = -1;
+						int y = -1;
+						for (int i = 0; i < 5; ++i) {
+							int xx = outpost.position.x + cx[i];
+							int yy = outpost.position.y + cy[i];
+							if (xx < 0 || xx >= size || yy < 0 || yy >= size)
+								continue;
+							if (!grid[xx * size + yy].water && water[xx][yy] > w) {
+								w = water[xx][yy];
+								x = xx;
+								y = yy;
+							}
+						}
+						int t;
+						for (t = 0; t < positions.size(); ++t) {
+							if (overlap(positions.get(t), new Pair(x, y)))
+								break;
+						}
+						if (t < positions.size()) continue;
+						positions.add(new Pair(x, y));
+					}
+				}
+				int tmp = positions.size();
+				int rem = n - positions.size();
+				// greedy select n largest (water + land) cell
+			int cnt = 0;
+			int start = 0;
+			while (cnt < rem) {
+				int row = 0;
+				int col;
+				col = start;
+				while (col > 0 && cnt < rem) {
+					int newXPos, newYPos;
+					if( X_AWAY == Direction.RIGHT ) {
+						newXPos = R * row;
+					} else {
+						newXPos = size-1 - R * row;
+					}
+					if( Y_AWAY == Direction.DOWN ) {
+						newYPos = R * col;
+					} else {
+						newYPos = size-1 - R * col;
+					}
+					Pair newPair = new Pair(newXPos, newYPos);
+					if(!grid[newXPos * size + newYPos].water) {
+						//int t;
+						//for (t = 0; t < positions.size(); ++t) {
+						//	if (overlap(positions.get(t), newPair))
+						//		break;
+						//}
+						//if (t >= positions.size()) {
+						++cnt;
+						positions.add(newPair);
+						//}
+					}
+					++row;
+					--col;
+				}
+				++start;
+			}
+				/*
+				for (int k = 0; k < rem; ++k) {
+					double w = -1;
+					int x = -1;
+					int y = -1;
+					for (int ii = 0; ii < size; ++ii) {
+						for (int jj = 0; jj < size; ++jj) {
+							int i = ii + size / 2;
+							int j = jj + size / 2;
+							if (i >= size)
+								i -= size;
+							if (j >= size)
+								j -= size;
+							//i = ii;
+							//j = jj;
+							if (grid[i * size + j].water || (water[i][j] + land[i][j]) < w) continue;
+							int t;
+							for (t = 0; t < tmp + k; ++t) {
+								if (overlap(positions.get(t), new Pair(i, j)))
+									break;
+							}
+							if (t < tmp + k) continue;
+							if ((water[i][j] + land[i][j]) > w) {
+								w = (water[i][j] + land[i][j]);
+								x = i;
+								y = j;
+							}
+						}
+					}
+					positions.add(new Pair(x, y));
+				}
+				*/
 			}
 			Collections.sort(positions, new PairComparator());
 			return positions;
+		}
+
+		boolean hasWater(Pair a) {
+			if (water[a.x][a.y] > 0)
+				return true;
+			else
+				return false;
+				/*
+			for (int i = a.x - R; i <= a.x + R; ++i) {
+				for (int j = a.y - R; j <= a.y + R; ++j) {
+					if (manhattanDistance(a, new Pair(i, j)) > R) continue;
+					if (i < 0 || i >= size || j < 0 || j >= size) continue;
+					if (grid[i * size + j].water)
+						return true;
+				}
+			}
+			return false;
+			*/
+		}
+
+		boolean overlap(Pair a, Pair b) {
+			for (int i = a.x - R; i <= a.x + R; ++i) {
+				for (int j = a.y - R; j <= a.y + R; ++j) {
+					if (manhattanDistance(a, new Pair(i, j)) > R) continue;
+					if (manhattanDistance(b, new Pair(i, j)) <= R)
+						return true;
+				}
+			}
+			return false;
 		}
 
 		// compute owned resources
@@ -225,7 +463,7 @@ public class Player extends outpost.sim.Player {
 		}
 
 		// old version findBestPositions (Grid from home cell)
-		public ArrayList<Pair> findBestPositionsGird(ArrayList<Outpost> outposts) {
+		public ArrayList<Pair> findBestPositionsGrid(ArrayList<Outpost> outposts) {
 			int n = outposts.size();
 			ArrayList<Pair> positions = new ArrayList<Pair>();
 			int cnt = 0;
