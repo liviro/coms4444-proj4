@@ -53,6 +53,14 @@ public class Player extends outpost.sim.Player {
 			strategy = newStrategy;
 		}
 
+		public void think() {
+			computeResources(myOutposts);
+			if (LACK_WATER < 50)
+				changeStrategy(Strategy.GET_STUFF);
+			else
+				changeStrategy(Strategy.ARMY);
+		}
+
 		public void dispatch() {
 			if (strategy == Strategy.PEEL) {
 				System.out.println("Strategy is PEEL");
@@ -126,7 +134,7 @@ public class Player extends outpost.sim.Player {
 							}
 						}
 					}
-					
+
 				}
 
 				for (Outpost outpost : myOutposts) {
@@ -185,21 +193,29 @@ public class Player extends outpost.sim.Player {
 			if (strategy == Strategy.ARMY) {
 				// general strategy
 				// (1) generate bestPositions according to weights
-				computeResources(myOutposts);
+				//computeResources(myOutposts);
 				//System.out.printf("LACKWATER = %f, LACKLAND = %f\n", LACK_WATER, LACK_LAND);
-				ArrayList<Pair> bestPositions = findBestPositions(myOutposts);
+				int rem = 0;
+				for (Outpost outpost : myOutposts) {
+					if (!outpost.station)
+						rem += 1;
+				}
+				ArrayList<Pair> bestPositions = findBestPositions(rem);
 
 				// (2) assign bestPositions as target positions to outposts
 				// currently assigned to the nearest outpost based on manhattan distance
 				for (Outpost outpost : myOutposts) {
+					if (outpost.station)
+						continue;
 					outpost.target = null;
 				}
+				Collections.sort(bestPositions, new PairComparator());
 				for (Pair position : bestPositions) {
 					int minDist = Integer.MAX_VALUE;
 					int oid = -1;
 					for (int i = 0; i < myOutposts.size(); ++i) {
 						Outpost outpost = myOutposts.get(i);
-						if (outpost.target != null)
+						if (outpost.station || outpost.target != null)
 							continue;
 						int dist = manhattanDistance(position, outpost.position);
 						if (dist < minDist) {
@@ -287,7 +303,7 @@ public class Player extends outpost.sim.Player {
 						if (y > 0) {
 							neighbors.add(new Pair(x, y - 1));
 						}
-						
+
 						boolean allWater = true;
 						for (Pair neighbor : neighbors) {
 							if (!isInWater(neighbor)) {
@@ -314,7 +330,47 @@ public class Player extends outpost.sim.Player {
 
 		// find best positions based on map and resources
 		// weight the cells to get the best
-		public ArrayList<Pair> findBestPositions(ArrayList<Outpost> outposts) {
+		public ArrayList<Pair> findBestPositions(int n) {
+			ArrayList<Pair> positions = new ArrayList<Pair>();
+			int cnt = 0;
+			int start = 0;
+			while (cnt < n) {
+				int row = 0;
+				int col;
+				col = start;
+				while (col > 0 && cnt < n) {
+					int newXPos, newYPos;
+					if( X_AWAY == Direction.RIGHT ) {
+						newXPos = R * row;
+					} else {
+						newXPos = size-1 - R * row;
+					}
+					if( Y_AWAY == Direction.DOWN ) {
+						newYPos = R * col;
+					} else {
+						newYPos = size-1 - R * col;
+					}
+					Pair newPair = new Pair(newXPos, newYPos);
+					if(!grid[newXPos * size + newYPos].water) {
+						//int t;
+						//for (t = 0; t < positions.size(); ++t) {
+						//	if (overlap(positions.get(t), newPair))
+						//		break;
+						//}
+						//if (t >= positions.size()) {
+						++cnt;
+						positions.add(newPair);
+						//}
+					}
+					++row;
+					--col;
+				}
+				++start;
+			}
+			return positions;
+		}
+
+		public ArrayList<Pair> findBestPositionsOld(ArrayList<Outpost> outposts) {
 			int n = outposts.size();
 			ArrayList<Pair> positions = new ArrayList<Pair>();
 			/*
@@ -920,8 +976,9 @@ public class Player extends outpost.sim.Player {
 			tenthTurn = false;
 		}
 
-		// For now have mastermind re-dispatch everyone on the tenth turn
+		mastermind.think();
 		mastermind.dispatch();
+		// For now have mastermind re-dispatch everyone on the tenth turn
 		//if (tenthTurn) {
 		//	mastermind.dispatch();
 		//}
