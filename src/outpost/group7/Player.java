@@ -83,31 +83,50 @@ public class Player extends outpost.sim.Player {
 			if (strategy == Strategy.GET_STUFF) {
 				// System.out.println("Strategy is GET_STUFF");
 				ArrayList<Pair> positions = waterPositions();
-				for (int i = 0; i < myOutposts.size(); i++) {
-					Outpost outpost = myOutposts.get(i);
-					outpost.target = null;
-					ArrayList<Pair> candidates = (ArrayList<Pair>) positions.clone();
-					while (outpost.target == null) {
-						double minDistance = size;
-						Pair closest = null;
-						for (Pair candidate : candidates) {
-							if (manhattanDistance(outpost.position, candidate) < minDistance) {
-								minDistance = manhattanDistance(outpost.position, candidate);
-								closest = candidate;
+				for (Outpost outpost : myOutposts) {
+					if (!outpost.station) {
+						outpost.target = null;
+						ArrayList<Pair> candidates = (ArrayList<Pair>) positions.clone();
+						while (outpost.target == null) {
+							double minDistance = 500;
+							Pair closest = null;
+							for (Pair candidate : candidates) {
+								if (manhattanDistance(outpost.position, candidate) < minDistance) {
+									minDistance = manhattanDistance(outpost.position, candidate);
+									closest = candidate;
+								}
+								if (manhattanDistance(outpost.position, candidate) > 500) {
+									System.out.println("What the fuck");
+								}
 							}
-						}
-						candidates.remove(closest);
-						boolean overlap = false;
-						for (int j = 0; j < i; j++) {
-							Outpost other = myOutposts.get(j);
-							if (overlap(other.target, closest)) {
-								overlap = true;
+							candidates.remove(closest);
+							boolean overlap = false;
+							for (Outpost other : myOutposts) {
+								if (other.station) {
+									// if (closest == null) {
+									// 	System.out.println("Positions size = " + positions.size());
+									// 	System.out.println("Candidates size = " + candidates.size());
+									// 	System.out.println(minDistance);
+									// 	System.out.println("closest is null");
+									// }
+									if (closest != null && overlapWithTolerance(other.target, closest)) {
+										overlap = true;
+									}
+								}
 							}
-						}
-						if (!overlap) {
-							outpost.target = closest;
+							if (!overlap) {
+								if (closest != null) {
+									outpost.target = closest;
+									outpost.station = true;
+								}
+								else {
+									System.out.println("closest was null");
+									outpost.target = HOME_CELL;
+								}
+							}
 						}
 					}
+					
 				}
 
 				for (Outpost outpost : myOutposts) {
@@ -286,6 +305,9 @@ public class Player extends outpost.sim.Player {
 						}
 					}
 				}
+			}
+			for (Pair position : positions) {
+				System.out.println(position.x + ", " + position.y);
 			}
 			return positions;
 		}
@@ -562,6 +584,19 @@ public class Player extends outpost.sim.Player {
 			return false;
 		}
 
+		boolean overlapWithTolerance(Pair a, Pair b) {
+			int tolerance = 3;
+			int Rr = R - tolerance;
+			for (int i = a.x - Rr; i <= a.x + Rr; ++i) {
+				for (int j = a.y - Rr; j <= a.y + Rr; ++j) {
+					if (manhattanDistance(a, new Pair(i, j)) > Rr) continue;
+					if (manhattanDistance(b, new Pair(i, j)) <= Rr)
+						return true;
+				}
+			}
+			return false;
+		}
+
 		// compute owned resources
 		public void computeResources(ArrayList<Outpost> outposts) {
 			double landNeeded = outposts.size() * L;
@@ -675,11 +710,13 @@ public class Player extends outpost.sim.Player {
 		public Pair target;
 		public Stack<Direction> moves;
 		public boolean deleted;
+		public boolean station;
 
 		public Outpost(int id) {
 			this.id = id;
 			position = HOME_CELL;
 			deleted = false;
+			station = false;
 		}
 
 		public void updatePosition(Pair newPosition) {
