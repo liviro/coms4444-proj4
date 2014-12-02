@@ -1,3 +1,4 @@
+
 package outpost.sim;
 
 // general utilities
