@@ -38,7 +38,8 @@ public class Player extends outpost.sim.Player {
 	////////////////////////////////////////////////////////////////////
 	enum Strategy {
 		PEEL,
-		ARMY
+		ARMY,
+		GET_STUFF
 	}
 
 	class Mastermind {
@@ -78,6 +79,90 @@ public class Player extends outpost.sim.Player {
 					outpost.assignMoves(moves);
 				}
 			}
+
+			if (strategy == Strategy.GET_STUFF) {
+				// System.out.println("Strategy is GET_STUFF");
+				ArrayList<Pair> positions = waterPositions();
+				for (int i = 0; i < myOutposts.size(); i++) {
+					Outpost outpost = myOutposts.get(i);
+					outpost.target = null;
+					ArrayList<Pair> candidates = (ArrayList<Pair>) positions.clone();
+					while (outpost.target == null) {
+						double minDistance = size;
+						Pair closest = null;
+						for (Pair candidate : candidates) {
+							if (manhattanDistance(outpost.position, candidate) < minDistance) {
+								minDistance = manhattanDistance(outpost.position, candidate);
+								closest = candidate;
+							}
+						}
+						candidates.remove(closest);
+						boolean overlap = false;
+						for (int j = 0; j < i; j++) {
+							Outpost other = myOutposts.get(j);
+							if (overlap(other.target, closest)) {
+								overlap = true;
+							}
+						}
+						if (!overlap) {
+							outpost.target = closest;
+						}
+					}
+				}
+
+				for (Outpost outpost : myOutposts) {
+					Stack<Direction> moves = new Stack<Direction>();
+					if (outpost.target.equals(outpost.position)) {
+						moves.push(STAY);
+					}
+					else {
+						// perform BFS, ignoring other players' outposts
+						// target cannot be a water cell
+						int[] cx = {-1, 0, 1, 0};
+						int[] cy = {0, -1, 0, 1};
+						Queue<Pair> q = new LinkedList<Pair>();
+						q.add(outpost.position);
+						boolean[][] vst = new boolean[size][size];
+						int[][] parentx = new int[size][size];
+						int[][] parenty = new int[size][size];
+						for (int i = 0; i < size; ++i) {
+							for (int j = 0; j < size; ++j) {
+								vst[i][j] = false;
+								parentx[i][j] = -1;
+								parenty[i][j] = -1;
+							}
+						}
+						vst[outpost.position.x][outpost.position.y] = true;
+						while (!q.isEmpty()) {
+							Pair p = new Pair(q.peek());
+							q.poll();
+							for (int i = 0; i < 4; ++i) {
+								int x = p.x + cx[i];
+								int y = p.y + cy[i];
+								if (x < 0 || x >= size || y < 0 || y >= size || vst[x][y] || grid[x * size + y].water)
+									continue;
+								vst[x][y] = true;
+								parentx[x][y] = p.x;
+								parenty[x][y] = p.y;
+								q.add(new Pair(x, y));
+								if (x == outpost.target.x && y == outpost.target.y) {
+									while (!(parentx[x][y] == outpost.position.x && parenty[x][y] == outpost.position.y)) {
+										int newx = parentx[x][y];
+										int newy = parenty[x][y];
+										x = newx;
+										y = newy;
+									}
+									moves.push(toDirection(x - outpost.position.x, y - outpost.position.y));
+									q.clear();
+									break;
+								}
+							}
+						}
+					}
+					outpost.assignMoves(moves);
+				}
+			}
+
 			if (strategy == Strategy.ARMY) {
 				// general strategy
 				// (1) generate bestPositions according to weights
@@ -163,6 +248,46 @@ public class Player extends outpost.sim.Player {
 					outpost.assignMoves(moves);
 				}
 			}
+		}
+
+		public ArrayList<Pair> waterPositions() {
+			ArrayList<Pair> positions = new ArrayList<Pair>();
+			for (int x = 0; x < size; x++) {
+				for (int y = 0; y < size; y++) {
+					if (!isInWater(new Pair(x, y))) {
+						ArrayList<Pair> neighbors = new ArrayList<Pair>();
+						if (x < size - 1) {
+							neighbors.add(new Pair(x + 1, y));
+						}
+						if (x > 0) {
+							neighbors.add(new Pair(x - 1, y));
+						}
+						if (y < size - 1) {
+							neighbors.add(new Pair(x, y + 1));
+						}
+						if (y > 0) {
+							neighbors.add(new Pair(x, y - 1));
+						}
+						
+						boolean allWater = true;
+						for (Pair neighbor : neighbors) {
+							if (!isInWater(neighbor)) {
+								allWater = false;
+							}
+						}
+						boolean allLand = true;
+						for (Pair neighbor : neighbors) {
+							if (isInWater(neighbor)) {
+								allLand = false;
+							}
+						}
+						if (!allWater && !allLand) {
+							positions.add(new Pair(x, y));
+						}
+					}
+				}
+			}
+			return positions;
 		}
 
 		// find best positions based on map and resources
@@ -691,7 +816,7 @@ public class Player extends outpost.sim.Player {
 
 			//mastermind = new Mastermind(Strategy.PEEL);
 			//mastermind.dispatch();
-			mastermind = new Mastermind(Strategy.ARMY);
+			mastermind = new Mastermind(Strategy.GET_STUFF);
 		}
 
 		// Update internal representation of game
