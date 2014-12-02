@@ -306,9 +306,9 @@ public class Player extends outpost.sim.Player {
 					}
 				}
 			}
-			for (Pair position : positions) {
-				System.out.println(position.x + ", " + position.y);
-			}
+			// for (Pair position : positions) {
+			// 	System.out.println(position.x + ", " + position.y);
+			// }
 			return positions;
 		}
 
