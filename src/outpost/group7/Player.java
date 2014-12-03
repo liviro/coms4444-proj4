@@ -12,6 +12,12 @@ public class Player extends outpost.sim.Player {
 	static Random random = new Random();
 	static int counter = 0;
 
+	// place two adjacent outposts for protection, only turned on for L=12 (because L=40 causes lack of land cells)
+	static int LAND_THRESHOLD = 500; 		// set this to a large value, e.g. 10000, to turn off protection for stationary outposts
+	static int LAND_THRESHOLD2 = 1000;		// set this to a large value, e.g. 10000, to turn off protection for grid outposts
+	// threshold for changing strategies
+	static int WATER_THRESHOLD = 50;		// water threshold for changing strategy between GET_STUFF and ARMY
+
 	////////////////////////////////////////////////////////////////////
 	static Pair HOME_CELL;
 	static int playerId;
@@ -58,7 +64,8 @@ public class Player extends outpost.sim.Player {
 
 		public void think() {
 			computeResources(myOutposts);
-			if (LACK_WATER < 50)
+			//System.out.printf("LACKWATER = %f, LACKLAND = %f\n", LACK_WATER, LACK_LAND);
+			if (LACK_WATER < WATER_THRESHOLD)
 				changeStrategy(Strategy.GET_STUFF);
 			else
 				changeStrategy(Strategy.ARMY);
@@ -66,7 +73,7 @@ public class Player extends outpost.sim.Player {
 
 		public void dispatch() {
 			if (strategy == Strategy.PEEL) {
-				System.out.println("Strategy is PEEL");
+				//System.out.println("Strategy is PEEL");
 				for (Outpost outpost : myOutposts) {
 					Stack<Direction> moves = new Stack<Direction>();
 					int i;
@@ -107,7 +114,7 @@ public class Player extends outpost.sim.Player {
 									closest = candidate;
 								}
 								if (manhattanDistance(outpost.position, candidate) > 500) {
-									System.out.println("What the fuck");
+									//System.out.println("What the fuck");
 								}
 							}
 							candidates.remove(closest);
@@ -129,9 +136,10 @@ public class Player extends outpost.sim.Player {
 								if (closest != null) {
 									outpost.target = closest;
 									outpost.station = true;
+									outpost.protect = false;
 								}
 								else {
-									System.out.println("closest was null");
+									//System.out.println("closest was null");
 									outpost.target = HOME_CELL;
 								}
 							}
@@ -194,16 +202,44 @@ public class Player extends outpost.sim.Player {
 			}
 
 			if (strategy == Strategy.ARMY) {
+				//System.out.println("Strategy is ARMY");
 				// general strategy
 				// (1) generate bestPositions according to weights
 				//computeResources(myOutposts);
 				//System.out.printf("LACKWATER = %f, LACKLAND = %f\n", LACK_WATER, LACK_LAND);
+				ArrayList<Pair> bestPositions = new ArrayList<Pair>();
+				// add protection
+				if (L == 12 && LACK_LAND >= LAND_THRESHOLD) {
+					for (Outpost soldier : myOutposts) {
+						if (soldier.station)
+							continue;
+						for (Outpost outpost : myOutposts) {
+							if (outpost.station && !outpost.protect) {
+								outpost.protect = true;
+								soldier.protect = true;
+								soldier.station = true;
+								int[] cx = {-1, 0, 1, 0};
+								int[] cy = {0, -1, 0, 1};
+								for (int i = 0; i < 4; ++i) {
+									int x = outpost.position.x + cx[i];
+									int y = outpost.position.y + cy[i];
+									if (x < 0 || x >= size || y < 0 || y >= size || isInWater(new Pair(x, y)))
+										continue;
+									soldier.target = new Pair(x, y);
+									break;
+								}
+								//System.out.printf("set protection: %d %d\n", soldier.target.x, soldier.target.y);
+								break;
+							}
+						}
+					}
+				}
 				int rem = 0;
 				for (Outpost outpost : myOutposts) {
 					if (!outpost.station)
 						rem += 1;
 				}
-				ArrayList<Pair> bestPositions = findBestPositions(rem);
+				bestPositions.addAll(findBestPositions(rem));
 
 				// (2) assign bestPositions as target positions to outposts
 				// currently assigned to the nearest outpost based on manhattan distance
@@ -227,6 +263,7 @@ public class Player extends outpost.sim.Player {
 						}
 					}
 					myOutposts.get(oid).target = new Pair(position);
+					//myOutposts.get(oid).protect = true;
 				}
 				/*System.out.println("xxx");
 				for (Outpost outpost : myOutposts) {
@@ -290,8 +327,6 @@ public class Player extends outpost.sim.Player {
 			}
 		}
 
-		
-
 		// find best positions based on map and resources
 		// weight the cells to get the best
 		public ArrayList<Pair> findBestPositions(int n) {
@@ -317,15 +352,27 @@ public class Player extends outpost.sim.Player {
 			int start = 0;
 			while (cnt < n) {
 				int row = HOME_CELL.x;
-				int col = HOME_CELL.y + start * 2*R * yAway;
+				int col = HOME_CELL.y + start * (2*R - 2) * yAway;
 				while (cnt < n) {
 					if (col < 0 || col >= size) break;
 					if (!grid[row * size + col].water) {
 						++cnt;
 						positions.add(new Pair(row, col));
+						// add protection
+						if (cnt < n && (LACK_LAND >= LAND_THRESHOLD2 && L == 12)) {
+							if (row + xAway >= 0 && row + xAway < size && !isInWater(new Pair(row + xAway, col)))
+								positions.add(new Pair(row + xAway, col));
+							else if (row + xBack >= 0 && row + xBack < size && !isInWater(new Pair(row + xBack, col)))
+								positions.add(new Pair(row + xBack, col));
+							else if (col + yAway >= 0 && col + yAway < size && !isInWater(new Pair(row, col + yAway)))
+								positions.add(new Pair(row, col + yAway));
+							else if (col + yBack >= 0 && col + yBack < size && !isInWater(new Pair(row, col + yBack)))
+								positions.add(new Pair(row, col + yBack));
+							++cnt;
+						}
 					}
-					row += R * xAway;
-					col += R * yBack;
+					row += (R - 1) * xAway;
+					col += (R - 1) * yBack;
 				}
 				++start;
 			}
@@ -465,6 +512,7 @@ public class Player extends outpost.sim.Player {
 		public Stack<Direction> moves;
 		public boolean deleted;
 		public boolean station;
+		public boolean protect;
 
 		public Outpost(int id) {
 			this.id = id;
@@ -612,7 +660,7 @@ public class Player extends outpost.sim.Player {
 			playerId = this.id;
 			Pair firstOutpost = king_outpostlist.get(this.id).get(0);
 			this.HOME_CELL = new Pair(firstOutpost.x, firstOutpost.y);
-			System.out.println("Home cell: (" + HOME_CELL.x + ", " + HOME_CELL.y + ")");
+			//System.out.println("Home cell: (" + HOME_CELL.x + ", " + HOME_CELL.y + ")");
 			// Init meaning of directions
 			if (HOME_CELL.x == 0 && HOME_CELL.y == 0) {
 				X_AWAY = Direction.RIGHT;
