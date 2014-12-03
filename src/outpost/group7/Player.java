@@ -25,12 +25,15 @@ public class Player extends outpost.sim.Player {
 	static int W;
 	static int T;
 	static ArrayList<Outpost> myOutposts;
+	static ArrayList<Pair> waterPositions;
 	static Mastermind mastermind;
 	static boolean tenthTurn = false;
 	////////////////////////////////////////////////////////////////////
 
 	double LACK_WATER;
 	double LACK_LAND;
+	double WATER_OWNED;
+	double LAND_OWNED;
 	int[][] water = new int[size][size];
 	int[][] land = new int[size][size];
 
@@ -90,7 +93,7 @@ public class Player extends outpost.sim.Player {
 
 			if (strategy == Strategy.GET_STUFF) {
 				// System.out.println("Strategy is GET_STUFF");
-				ArrayList<Pair> positions = waterPositions();
+				ArrayList<Pair> positions = waterPositions;
 				for (Outpost outpost : myOutposts) {
 					if (!outpost.station) {
 						outpost.target = null;
@@ -287,48 +290,7 @@ public class Player extends outpost.sim.Player {
 			}
 		}
 
-		public ArrayList<Pair> waterPositions() {
-			ArrayList<Pair> positions = new ArrayList<Pair>();
-			for (int x = 0; x < size; x++) {
-				for (int y = 0; y < size; y++) {
-					if (!isInWater(new Pair(x, y))) {
-						ArrayList<Pair> neighbors = new ArrayList<Pair>();
-						if (x < size - 1) {
-							neighbors.add(new Pair(x + 1, y));
-						}
-						if (x > 0) {
-							neighbors.add(new Pair(x - 1, y));
-						}
-						if (y < size - 1) {
-							neighbors.add(new Pair(x, y + 1));
-						}
-						if (y > 0) {
-							neighbors.add(new Pair(x, y - 1));
-						}
-
-						boolean allWater = true;
-						for (Pair neighbor : neighbors) {
-							if (!isInWater(neighbor)) {
-								allWater = false;
-							}
-						}
-						boolean allLand = true;
-						for (Pair neighbor : neighbors) {
-							if (isInWater(neighbor)) {
-								allLand = false;
-							}
-						}
-						if (!allWater && !allLand) {
-							positions.add(new Pair(x, y));
-						}
-					}
-				}
-			}
-			// for (Pair position : positions) {
-			// 	System.out.println(position.x + ", " + position.y);
-			// }
-			return positions;
-		}
+		
 
 		// find best positions based on map and resources
 		// weight the cells to get the best
@@ -452,6 +414,8 @@ public class Player extends outpost.sim.Player {
 					}
 				}
 			}
+			WATER_OWNED = waterOwned;
+			LAND_OWNED = landOwned;
 			LACK_WATER = waterOwned - waterNeeded;
 			LACK_LAND = landOwned - landNeeded;
 		}
@@ -599,6 +563,49 @@ public class Player extends outpost.sim.Player {
 		}
 	}
 
+	public ArrayList<Pair> waterPositions() {
+			ArrayList<Pair> positions = new ArrayList<Pair>();
+			for (int x = 0; x < size; x++) {
+				for (int y = 0; y < size; y++) {
+					if (!isInWater(new Pair(x, y))) {
+						ArrayList<Pair> neighbors = new ArrayList<Pair>();
+						if (x < size - 1) {
+							neighbors.add(new Pair(x + 1, y));
+						}
+						if (x > 0) {
+							neighbors.add(new Pair(x - 1, y));
+						}
+						if (y < size - 1) {
+							neighbors.add(new Pair(x, y + 1));
+						}
+						if (y > 0) {
+							neighbors.add(new Pair(x, y - 1));
+						}
+
+						boolean allWater = true;
+						for (Pair neighbor : neighbors) {
+							if (!isInWater(neighbor)) {
+								allWater = false;
+							}
+						}
+						boolean allLand = true;
+						for (Pair neighbor : neighbors) {
+							if (isInWater(neighbor)) {
+								allLand = false;
+							}
+						}
+						if (!allWater && !allLand) {
+							positions.add(new Pair(x, y));
+						}
+					}
+				}
+			}
+			// for (Pair position : positions) {
+			// 	System.out.println(position.x + ", " + position.y);
+			// }
+			return positions;
+	}
+
 	public ArrayList<movePair> move(ArrayList<ArrayList<Pair>> king_outpostlist, Point[] gridin, int r, int L, int W, int t) {
 		// Initialize once
 		if (counter == 0) {
@@ -644,6 +651,9 @@ public class Player extends outpost.sim.Player {
 			//mastermind = new Mastermind(Strategy.PEEL);
 			//mastermind.dispatch();
 			mastermind = new Mastermind(Strategy.GET_STUFF);
+
+			deepCopyGrid(gridin);
+			waterPositions = waterPositions();
 		}
 
 		// Update internal representation of game
@@ -687,6 +697,26 @@ public class Player extends outpost.sim.Player {
 			while (i < myOutposts.size()) {
 				myOutposts.get(i).id--;
 				i++;
+			}
+			// If still less
+			while (updatedOutposts.size() < myOutposts.size()) {
+				for (i = 0; i < myOutposts.size(); i++) {
+					boolean found = false;
+					for (Pair outpost : updatedOutposts) {
+						if (myOutposts.get(i).position.equals(outpost)) {
+							found = true;
+							break;
+						}
+					}
+					if (!found) {
+						myOutposts.remove(i);
+						break;
+					}
+				}
+				while (i < myOutposts.size()) {
+					myOutposts.get(i).id--;
+					i++;
+				}
 			}
 		}
 		else {
